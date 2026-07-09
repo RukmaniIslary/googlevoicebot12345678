@@ -81,9 +81,8 @@ function paymentKeyboard(productKey, areaCode) {
 // ── After payment keyboard ────────────────────
 const afterPayKeyboard = {
   inline_keyboard: [
-    [{ text: '💬 Confirm via Telegram', url: 'https://t.me/atmoverse' }],
-    [{ text: '📱 Confirm via WhatsApp', url: 'https://wa.me/19152481421' }],
-    [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
+    [{ text: '✅ Paid', callback_data: 'paid' }],
+    [{ text: '❌ Cancel', callback_data: 'back_main' }],
   ],
 };
 
@@ -294,6 +293,20 @@ async function handleCallbackQuery(bot, query) {
   switch (data) {
     case 'back_main':
       await edit(`🏠 *Main Menu*\n\nHow can we help you today?`, mainMenuKeyboard);
+      break;
+
+    case 'paid':
+      await edit(
+        `✅ *Payment Received!*\n\n` +
+        `Thank you! Your payment is being verified.\n\n` +
+        `⚡ Your account will be delivered shortly.\n\n` +
+        `For support contact @atmoverse.`,
+        {
+          inline_keyboard: [
+            [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
+          ],
+        }
+      );
       break;
 
     case 'menu_products':

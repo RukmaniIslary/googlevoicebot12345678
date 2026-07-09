@@ -1,0 +1,25 @@
+{
+  "name": "atmoverse-bot",
+  "version": "1.0.0",
+  "description": "ATMOVERSE Telegram AI Customer Support Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["telegram", "bot", "atmoverse", "customer-support"],
+  "author": "ATMOVERSE",
+  "license": "MIT"
+}

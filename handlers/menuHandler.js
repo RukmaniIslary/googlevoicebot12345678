@@ -114,7 +114,7 @@ const PRODUCTS = {
 // ── Texts ─────────────────────────────────────
 const TEXTS = {
   welcome: (firstName) =>
-    `👋 Welcome to *ATMOVERSE*, ${firstName || 'there'}!\n\n` +
+    `👋 *Welcome to ATMOVERSE!*\n\n` +
     `We provide premium digital accounts with:\n` +
     `✅ Full Account Access\n` +
     `✅ Verified Accounts\n` +

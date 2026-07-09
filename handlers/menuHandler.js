@@ -82,7 +82,7 @@ function paymentKeyboard(productKey, areaCode) {
 const afterPayKeyboard = {
   inline_keyboard: [
     [{ text: '✅ Paid', callback_data: 'paid' }],
-    [{ text: '❌ Cancel', callback_data: 'back_main' }],
+    [{ text: '❌ Cancel', callback_data: 'cancel_order' }],
   ],
 };
 
@@ -293,15 +293,30 @@ async function handleCallbackQuery(bot, query) {
       break;
 
     case 'paid':
-      await edit(
+      try { await bot.deleteMessage(chatId, messageId); } catch (_) {}
+      await bot.sendMessage(chatId,
         `✅ *Payment Received!*\n\n` +
         `Thank you! Your payment is being verified.\n\n` +
         `⚡ Your account will be delivered shortly.\n\n` +
         `For support contact @atmoverse.`,
         {
-          inline_keyboard: [
-            [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
-          ],
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
+            ],
+          },
+        }
+      );
+      break;
+
+    case 'cancel_order':
+      try { await bot.deleteMessage(chatId, messageId); } catch (_) {}
+      await bot.sendMessage(chatId,
+        `❌ *Order Cancelled*\n\nNo problem! Come back anytime.`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: mainMenuKeyboard,
         }
       );
       break;

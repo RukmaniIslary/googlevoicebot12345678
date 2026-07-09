@@ -266,24 +266,21 @@ async function handleCallbackQuery(bot, query) {
         `🏦 *UPI Payment*\n\n` +
         `📱 *UPI ID:* \`rajiv.bordoloi@ptaxis\`\n` +
         `👤 *Name:* Samarjit Bordoloi\n\n` +
-        `✅ Works with Paytm, PhonePe, GPay, BHIM.\n\n` +
-        `⚠️ Send screenshot after payment to confirm:`
+        `✅ Works with Paytm, PhonePe, GPay, BHIM.`
       );
     } else if (method === 'trc20') {
       await sendPayment(bot, chatId, messageId, 'usdt-trc20-qr.jpeg',
         orderSummary +
         `🪙 *USDT TRC20 Payment*\n\n` +
         `\`TVHeNRpD6TffHEPvkmWEDUHiVSqwTApkKs\`\n\n` +
-        `⚠️ *TRC20 network only.* Wrong network = lost funds.\n\n` +
-        `Send *TxID* after payment to confirm:`
+        `⚠️ *TRC20 network only.* Wrong network = lost funds.`
       );
     } else if (method === 'bep20') {
       await sendPayment(bot, chatId, messageId, 'usdt-bep20-qr.jpeg',
         orderSummary +
         `🪙 *USDT BEP20 Payment*\n\n` +
         `\`0xf2db22a33bd64e734146229ba3c95813bdf28f7d\`\n\n` +
-        `⚠️ *BEP20 network only.* Wrong network = lost funds.\n\n` +
-        `Send *TxID* after payment to confirm:`
+        `⚠️ *BEP20 network only.* Wrong network = lost funds.`
       );
     }
     return;

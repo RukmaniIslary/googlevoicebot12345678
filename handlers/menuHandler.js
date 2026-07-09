@@ -293,21 +293,10 @@ async function handleCallbackQuery(bot, query) {
       break;
 
     case 'paid':
-      try { await bot.deleteMessage(chatId, messageId); } catch (_) {}
-      await bot.sendMessage(chatId,
-        `✅ *Payment Received!*\n\n` +
-        `Thank you! Your payment is being verified.\n\n` +
-        `⚡ Your account will be delivered shortly.\n\n` +
-        `For support contact @atmoverse.`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
-            ],
-          },
-        }
-      );
+      await bot.answerCallbackQuery(query.id, {
+        text: '✅ Thank you! We will process your order shortly.',
+        show_alert: true,
+      });
       break;
 
     case 'cancel_order':

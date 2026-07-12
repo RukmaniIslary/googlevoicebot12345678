@@ -7,6 +7,7 @@ const fs = require('fs');
 const { mainMenuKeyboard } = require('../buttons/mainMenu');
 const { faqKeyboard, backKeyboard } = require('../buttons/subMenus');
 const { getProducts, getProduct, getPayments } = require('../utils/store');
+const { usdToInrString } = require('../utils/currency');
 
 // ── Available area codes for GV ───────────────
 const AVAILABLE_CODES = [
@@ -332,11 +333,15 @@ async function handleCallbackQuery(bot, query) {
 
     if (method === 'upi') {
       const upi = payments.upi || {};
+      const totalUsd = p ? p.price * qty : 0;
+      const inrString = await usdToInrString(totalUsd);
       const upiDetails = upi.id
         ? `📱 *UPI ID:* \`${upi.id}\`${upi.name ? `\n👤 *Name:* ${upi.name}` : ''}\n\n✅ Works with Paytm, PhonePe, GPay, BHIM.`
         : `✅ Works with Paytm, PhonePe, GPay, BHIM.\n\n_Contact @Loikye for UPI details._`;
       await sendPayment(bot, chatId, messageId, upi.qrFile || 'upi-qr.jpeg',
-        orderSummary + `🏦 *UPI Payment*\n\n` + upiDetails
+        orderSummary +
+        `💵 *Amount in INR:* ${inrString} _(live rate)_\n\n` +
+        `🏦 *UPI Payment*\n\n` + upiDetails
       );
     } else if (method === 'trc20') {
       const addr = payments.trc20?.address || 'Contact @Loikye';

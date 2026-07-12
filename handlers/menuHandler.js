@@ -8,6 +8,8 @@ const { mainMenuKeyboard } = require('../buttons/mainMenu');
 const { faqKeyboard, backKeyboard } = require('../buttons/subMenus');
 const { getProducts, getProduct, getPayments } = require('../utils/store');
 const { usdToInrString } = require('../utils/currency');
+const { createInvoice } = require('../services/cryptomusService');
+const logger = require('../utils/logger');
 
 // ── Available area codes for GV ───────────────
 const AVAILABLE_CODES = [
@@ -119,6 +121,7 @@ function paymentKeyboard(productKey, areaCode, qty) {
         { text: '🪙 USDT BEP20', callback_data: `pay_bep20_${productKey}_${areaCode}_${q}` },
       ],
       [{ text: '🟡 Binance Pay', callback_data: `pay_binance_${productKey}_${areaCode}_${q}` }],
+      [{ text: '🔐 Cryptomus (Any Crypto)', callback_data: `pay_cryptomus_${productKey}_${areaCode}_${q}` }],
       [{ text: '⬅ Back', callback_data: `qty_back_${productKey}_${areaCode}` }],
       [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
     ],
@@ -318,7 +321,7 @@ async function handleCallbackQuery(bot, query) {
   }
 
   // ── Payment: pay_<method>_<product>_<code>_<qty> ──
-  if (data.startsWith('pay_upi_') || data.startsWith('pay_trc20_') || data.startsWith('pay_bep20_') || data.startsWith('pay_binance_')) {
+  if (data.startsWith('pay_upi_') || data.startsWith('pay_trc20_') || data.startsWith('pay_bep20_') || data.startsWith('pay_binance_') || data.startsWith('pay_cryptomus_')) {
     const parts = data.split('_');
     const method = parts[1];
     const qty = parseInt(parts[parts.length - 1], 10) || 1;
@@ -382,6 +385,42 @@ async function handleCallbackQuery(bot, query) {
         `🆔 *Pay ID:* \`${payId}\`\n\n` +
         `✅ Open Binance app → Pay → Enter Pay ID or scan QR.`
       );
+    } else if (method === 'cryptomus') {
+      // Generate a live Cryptomus invoice
+      try {
+        await bot.answerCallbackQuery(query.id, { text: '⏳ Generating payment link...' });
+        const totalUsd = p ? p.price * qty : 0;
+        const orderId  = `${chatId}_${Date.now()}`;
+        const desc     = `${p?.name || productKey} x${qty}`;
+        const invoice  = await createInvoice(totalUsd, orderId, desc);
+
+        try { await bot.deleteMessage(chatId, messageId); } catch (_) {}
+
+        await bot.sendMessage(chatId,
+          orderSummary +
+          `🔐 *Cryptomus Payment*\n\n` +
+          `💰 *Amount:* $${totalUsd} USD\n` +
+          `🕐 *Link expires in:* 1 hour\n\n` +
+          `Tap the button below to choose your crypto and complete payment:`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '💳 Pay Now with Cryptomus', url: invoice.url }],
+                [{ text: '✅ I have paid', callback_data: 'paid' }],
+                [{ text: '❌ Cancel', callback_data: 'cancel_order' }],
+              ],
+            },
+          }
+        );
+      } catch (err) {
+        logger.error('Cryptomus invoice error:', err.message);
+        try { await bot.deleteMessage(chatId, messageId); } catch (_) {}
+        await bot.sendMessage(chatId,
+          `⚠️ *Cryptomus is temporarily unavailable.*\n\nPlease use another payment method or contact @Loikye.`,
+          { parse_mode: 'Markdown', reply_markup: paymentKeyboard(productKey, areaCode, qty) }
+        );
+      }
     }
     return;
   }

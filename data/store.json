@@ -1,0 +1,40 @@
+{
+  "products": {
+    "new_gv": {
+      "name": "New Google Voice",
+      "emoji": "🇺🇸",
+      "price": 20,
+      "inStock": true,
+      "description": "Brand new, never-used number\nFull account access\nVerified & ready to use\nInstant delivery after payment\nReplacement available"
+    },
+    "old_gv": {
+      "name": "Old Google Voice",
+      "emoji": "🇺🇸",
+      "price": 25,
+      "inStock": true,
+      "description": "Aged account with history\nHigher trust score\nFull account access\nInstant delivery after payment\nReplacement available"
+    },
+    "gmail": {
+      "name": "USA Gmail HQ",
+      "emoji": "📧",
+      "price": 5,
+      "inStock": true,
+      "description": "High-quality USA Gmail\nFull account access\nPhone-verified\nInstant delivery after payment\nReplacement available"
+    }
+  },
+  "payments": {
+    "upi": {
+      "id": "",
+      "name": "",
+      "qrFile": "upi-qr.jpeg"
+    },
+    "trc20": {
+      "address": "TVHeNRpD6TffHEPvkmWEDUHiVSqwTApkKs",
+      "qrFile": "usdt-trc20-qr.jpeg"
+    },
+    "bep20": {
+      "address": "0xf2db22a33bd64e734146229ba3c95813bdf28f7d",
+      "qrFile": "usdt-bep20-qr.jpeg"
+    }
+  }
+}

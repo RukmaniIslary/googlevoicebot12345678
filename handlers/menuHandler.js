@@ -5,7 +5,8 @@
 const path = require('path');
 const fs = require('fs');
 const { mainMenuKeyboard } = require('../buttons/mainMenu');
-const { productsKeyboard, faqKeyboard, backKeyboard } = require('../buttons/subMenus');
+const { faqKeyboard, backKeyboard } = require('../buttons/subMenus');
+const { getProducts, getProduct, getPayments } = require('../utils/store');
 
 // ── Available area codes for GV ───────────────
 const AVAILABLE_CODES = [
@@ -41,6 +42,29 @@ const AVAILABLE_CODES = [
   { code: '929', label: '929 – New York, NY' },
 ];
 
+// ── GV product keys (require area code selection) ──
+const GV_PRODUCTS = ['new_gv', 'old_gv'];
+
+// ── Dynamic products keyboard ─────────────────
+function buildProductsKeyboard() {
+  const products = getProducts();
+  const rows = Object.entries(products).map(([key, p]) => ([{
+    text: `${p.emoji} ${p.name} — $${p.price} USD${p.inStock ? '' : ' ❌'}`,
+    callback_data: `product_${key}`,
+  }]));
+  rows.push([{ text: '⬅ Back to Menu', callback_data: 'back_main' }]);
+  return { inline_keyboard: rows };
+}
+
+// ── Dynamic pricing text ───────────────────────
+function buildPricingText() {
+  const products = getProducts();
+  const lines = Object.values(products).map(p =>
+    `${p.emoji} *${p.name}* — $${p.price} USD${p.inStock ? '' : ' ❌ Out of Stock'}`
+  );
+  return `💰 *Pricing List*\n\n${lines.join('\n')}\n\n_All prices are in USD._`;
+}
+
 // ── Build area code keyboard (2 per row) ─────
 function buildAreaCodeKeyboard(productKey) {
   const rows = [];
@@ -63,16 +87,37 @@ function buildAreaCodeKeyboard(productKey) {
   return { inline_keyboard: rows };
 }
 
-// ── Payment keyboard ──────────────────────────
-function paymentKeyboard(productKey, areaCode) {
+// ── Quantity keyboard ─────────────────────────
+function quantityKeyboard(productKey, areaCode) {
+  const isGV = GV_PRODUCTS.includes(productKey);
   return {
     inline_keyboard: [
-      [{ text: '🏦 UPI', callback_data: `pay_upi_${productKey}_${areaCode}` }],
       [
-        { text: '🪙 USDT TRC20', callback_data: `pay_trc20_${productKey}_${areaCode}` },
-        { text: '🪙 USDT BEP20', callback_data: `pay_bep20_${productKey}_${areaCode}` },
+        { text: '1️⃣', callback_data: `qty_${productKey}_${areaCode}_1` },
+        { text: '2️⃣', callback_data: `qty_${productKey}_${areaCode}_2` },
+        { text: '3️⃣', callback_data: `qty_${productKey}_${areaCode}_3` },
       ],
-      [{ text: '⬅ Back', callback_data: `area_${productKey}` }],
+      [
+        { text: '4️⃣', callback_data: `qty_${productKey}_${areaCode}_4` },
+        { text: '5️⃣', callback_data: `qty_${productKey}_${areaCode}_5` },
+      ],
+      [{ text: '⬅ Back', callback_data: isGV ? `area_${productKey}` : `product_${productKey}` }],
+      [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
+    ],
+  };
+}
+
+// ── Payment keyboard ──────────────────────────
+function paymentKeyboard(productKey, areaCode, qty) {
+  const q = qty || 1;
+  return {
+    inline_keyboard: [
+      [{ text: '🏦 UPI', callback_data: `pay_upi_${productKey}_${areaCode}_${q}` }],
+      [
+        { text: '🪙 USDT TRC20', callback_data: `pay_trc20_${productKey}_${areaCode}_${q}` },
+        { text: '🪙 USDT BEP20', callback_data: `pay_bep20_${productKey}_${areaCode}_${q}` },
+      ],
+      [{ text: '⬅ Back', callback_data: `qty_back_${productKey}_${areaCode}` }],
       [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
     ],
   };
@@ -104,13 +149,6 @@ async function sendPayment(bot, chatId, messageId, qrFile, text) {
   }
 }
 
-// ── Product info ──────────────────────────────
-const PRODUCTS = {
-  new_gv: { name: 'New Google Voice', price: '$20 USD', emoji: '🇺🇸' },
-  old_gv: { name: 'Old Google Voice', price: '$25 USD', emoji: '🇺🇸' },
-  gmail:  { name: 'USA Gmail HQ',     price: '$5 USD',  emoji: '📧' },
-};
-
 // ── Texts ─────────────────────────────────────
 const TEXTS = {
   welcome: (firstName) =>
@@ -124,45 +162,6 @@ const TEXTS = {
 
   products: `🛒 *Our Products*\n\nChoose a product:`,
 
-  product_new_gv:
-    `🇺🇸 *Google Voice Account (New)*\n\n` +
-    `💰 Price: *$20 USD*\n\n` +
-    `• Brand new, never-used number\n` +
-    `• Full account access\n` +
-    `• Verified & ready to use\n` +
-    `• Instant delivery after payment\n` +
-    `• Replacement available\n\n` +
-    `📍 *Select your preferred area code:*`,
-
-  product_old_gv:
-    `🇺🇸 *Google Voice Account (Old)*\n\n` +
-    `💰 Price: *$25 USD*\n\n` +
-    `• Aged account with history\n` +
-    `• Higher trust score\n` +
-    `• Full account access\n` +
-    `• Instant delivery after payment\n` +
-    `• Replacement available\n\n` +
-    `📍 *Select your preferred area code:*`,
-
-  product_gmail:
-    `📧 *USA Gmail Account (HQ)*\n\n` +
-    `💰 Price: *$5 USD*\n\n` +
-    `• High-quality USA Gmail\n` +
-    `• Full account access\n` +
-    `• Phone-verified\n` +
-    `• Instant delivery after payment\n` +
-    `• Replacement available\n\n` +
-    `💳 *Select your payment method:*`,
-
-  pricing:
-    `💰 *Pricing List*\n\n` +
-    `┌──────────────────────────────┐\n` +
-    `│ 🇺🇸 New Google Voice  $20 USD │\n` +
-    `│ 🇺🇸 Old Google Voice  $25 USD │\n` +
-    `│ 📧 USA Gmail HQ        $5 USD │\n` +
-    `└──────────────────────────────┘\n\n` +
-    `All prices are in USD.`,
-
   areacodes:
     `📍 *Available Area Codes*\n\n` +
     AVAILABLE_CODES.map(c => `+1 (${c.code}) — ${c.label.split('– ')[1]}`).join('\n') +
@@ -175,7 +174,7 @@ const TEXTS = {
     `All accounts delivered *instantly* after payment.\n\n` +
     `• Available 24/7\n` +
     `• No waiting, no delays\n\n` +
-    `_For delays, contact @atmoverse._`,
+    `_For delays, contact @Loikye._`,
 
   faq_replacement:
     `🔄 *Replacement Policy*\n\n` +
@@ -183,7 +182,7 @@ const TEXTS = {
     `• Account stops working\n` +
     `• Doesn't match description\n\n` +
     `⚠️ Not covered if banned due to your activities.\n\n` +
-    `Contact @atmoverse within 24 hours.`,
+    `Contact @Loikye within 24 hours.`,
 
   faq_access:
     `🔑 *Account Access*\n\n` +
@@ -199,6 +198,21 @@ const TEXTS = {
 
   contact: `📞 *Contact Support*\n\nWe're available 24/7:`,
 };
+
+// ── Build product detail text ─────────────────
+function buildProductText(key, p) {
+  const descLines = (p.description || '').split('\n').map(l => `• ${l}`).join('\n');
+  const isGV = GV_PRODUCTS.includes(key);
+  const footer = isGV ? `📍 *Select your preferred area code:*` : `🔢 *How many do you want?*`;
+  const stockLine = p.inStock ? '' : `\n⚠️ *Currently Out of Stock*\n`;
+  return (
+    `${p.emoji} *${p.name}*\n\n` +
+    `💰 Price: *$${p.price} USD*\n` +
+    stockLine + `\n` +
+    descLines + `\n\n` +
+    footer
+  );
+}
 
 // ── Main handler ──────────────────────────────
 async function handleCallbackQuery(bot, query) {
@@ -219,8 +233,8 @@ async function handleCallbackQuery(bot, query) {
   // ── Area code selection: area_<product> ──────
   if (data.startsWith('area_')) {
     const productKey = data.replace('area_', '');
-    const textKey = `product_${productKey}`;
-    await edit(TEXTS[textKey] || `📍 Select your area code:`, buildAreaCodeKeyboard(productKey));
+    const p = getProduct(productKey);
+    await edit(buildProductText(productKey, p), buildAreaCodeKeyboard(productKey));
     return;
   }
 
@@ -229,60 +243,136 @@ async function handleCallbackQuery(bot, query) {
     const parts = data.split('_');
     const areaCode = parts[parts.length - 1];
     const productKey = parts.slice(1, -1).join('_');
-    const product = PRODUCTS[productKey];
+    const p = getProduct(productKey);
     const codeInfo = AVAILABLE_CODES.find(c => c.code === areaCode);
     const location = codeInfo ? codeInfo.label.split('– ')[1] : areaCode;
 
     await edit(
       `✅ *Area Code Selected*\n\n` +
       `📍 *+1 (${areaCode})* — ${location}\n` +
-      `📦 *Product:* ${product?.emoji || ''} ${product?.name || productKey}\n` +
-      `💰 *Price:* ${product?.price || ''}\n\n` +
-      `💳 *Now select your payment method:*`,
-      paymentKeyboard(productKey, areaCode)
+      `📦 *Product:* ${p?.emoji || ''} ${p?.name || productKey}\n` +
+      `💰 *Price:* $${p?.price || ''} USD\n\n` +
+      `🔢 *How many do you want?*`,
+      quantityKeyboard(productKey, areaCode)
     );
     return;
   }
 
-  // ── Payment with product+code: pay_<method>_<product>_<code> ──
+  // ── Quantity back navigation: qty_back_<product>_<code> ──
+  if (data.startsWith('qty_back_')) {
+    const inner = data.replace('qty_back_', '');
+    const parts = inner.split('_');
+    const areaCode = parts[parts.length - 1];
+    const productKey = parts.slice(0, -1).join('_');
+    const p = getProduct(productKey);
+    const isGV = GV_PRODUCTS.includes(productKey);
+
+    if (isGV) {
+      const codeInfo = AVAILABLE_CODES.find(c => c.code === areaCode);
+      const location = codeInfo ? codeInfo.label.split('– ')[1] : areaCode;
+      await edit(
+        `✅ *Area Code Selected*\n\n` +
+        `📍 *+1 (${areaCode})* — ${location}\n` +
+        `📦 *Product:* ${p?.emoji || ''} ${p?.name || productKey}\n` +
+        `💰 *Price:* $${p?.price || ''} USD\n\n` +
+        `🔢 *How many do you want?*`,
+        quantityKeyboard(productKey, areaCode)
+      );
+    } else {
+      await edit(buildProductText(productKey, p), quantityKeyboard(productKey, '0'));
+    }
+    return;
+  }
+
+  // ── Quantity selected: qty_<product>_<code>_<qty> ────────
+  if (data.startsWith('qty_')) {
+    const parts = data.split('_');
+    const qty = parseInt(parts[parts.length - 1], 10);
+    const areaCode = parts[parts.length - 2];
+    const productKey = parts.slice(1, -2).join('_');
+    const p = getProduct(productKey);
+    const codeInfo = AVAILABLE_CODES.find(c => c.code === areaCode);
+    const location = codeInfo ? codeInfo.label.split('– ')[1] : (areaCode === '0' ? '' : areaCode);
+    const total = p ? `$${(p.price * qty).toFixed(0)} USD` : '';
+    const locationLine = location ? `📍 *Area Code:* +1 (${areaCode}) — ${location}\n` : '';
+
+    await edit(
+      `🔢 *Quantity Selected: ${qty}*\n\n` +
+      `📦 *Product:* ${p?.emoji || ''} ${p?.name || productKey}\n` +
+      locationLine +
+      `💰 *Unit Price:* $${p?.price || ''} USD\n` +
+      `🧾 *Total:* ${total}\n\n` +
+      `💳 *Select your payment method:*`,
+      paymentKeyboard(productKey, areaCode, qty)
+    );
+    return;
+  }
+
+  // ── Payment: pay_<method>_<product>_<code>_<qty> ──
   if (data.startsWith('pay_upi_') || data.startsWith('pay_trc20_') || data.startsWith('pay_bep20_')) {
     const parts = data.split('_');
-    const method = parts[1]; // upi / trc20 / bep20
-    const areaCode = parts[parts.length - 1];
-    const productKey = parts.slice(2, -1).join('_');
-    const product = PRODUCTS[productKey];
+    const method = parts[1];
+    const qty = parseInt(parts[parts.length - 1], 10) || 1;
+    const areaCode = parts[parts.length - 2];
+    const productKey = parts.slice(2, -2).join('_');
+    const p = getProduct(productKey);
+    const payments = getPayments();
     const codeInfo = AVAILABLE_CODES.find(c => c.code === areaCode);
-    const location = codeInfo ? codeInfo.label.split('– ')[1] : areaCode;
+    const location = codeInfo ? codeInfo.label.split('– ')[1] : (areaCode === '0' ? '' : areaCode);
+    const total = p ? `$${(p.price * qty).toFixed(0)} USD` : '';
+    const locationLine = location ? `• Area Code: +1 (${areaCode}) — ${location}\n` : '';
 
     const orderSummary =
       `📦 *Order Summary*\n` +
-      `• Product: ${product?.emoji || ''} ${product?.name || productKey}\n` +
-      `• Area Code: +1 (${areaCode}) — ${location}\n` +
-      `• Price: ${product?.price || ''}\n\n`;
+      `• Product: ${p?.emoji || ''} ${p?.name || productKey}\n` +
+      locationLine +
+      `• Quantity: ${qty}\n` +
+      `• Unit Price: $${p?.price || ''} USD\n` +
+      `• *Total: ${total}*\n\n`;
 
     if (method === 'upi') {
-      await sendPayment(bot, chatId, messageId, 'upi-qr.jpeg',
-        orderSummary +
-        `🏦 *UPI Payment*\n\n` +
-        `📱 *UPI ID:* \`rajiv.bordoloi@ptaxis\`\n` +
-        `👤 *Name:* Samarjit Bordoloi\n\n` +
-        `✅ Works with Paytm, PhonePe, GPay, BHIM.`
+      const upi = payments.upi || {};
+      const upiDetails = upi.id
+        ? `📱 *UPI ID:* \`${upi.id}\`${upi.name ? `\n👤 *Name:* ${upi.name}` : ''}\n\n✅ Works with Paytm, PhonePe, GPay, BHIM.`
+        : `✅ Works with Paytm, PhonePe, GPay, BHIM.\n\n_Contact @Loikye for UPI details._`;
+      await sendPayment(bot, chatId, messageId, upi.qrFile || 'upi-qr.jpeg',
+        orderSummary + `🏦 *UPI Payment*\n\n` + upiDetails
       );
     } else if (method === 'trc20') {
-      await sendPayment(bot, chatId, messageId, 'usdt-trc20-qr.jpeg',
+      const addr = payments.trc20?.address || 'Contact @Loikye';
+      await sendPayment(bot, chatId, messageId, payments.trc20?.qrFile || 'usdt-trc20-qr.jpeg',
         orderSummary +
         `🪙 *USDT TRC20 Payment*\n\n` +
-        `\`TVHeNRpD6TffHEPvkmWEDUHiVSqwTApkKs\`\n\n` +
+        `\`${addr}\`\n\n` +
         `⚠️ *TRC20 network only.* Wrong network = lost funds.`
       );
     } else if (method === 'bep20') {
-      await sendPayment(bot, chatId, messageId, 'usdt-bep20-qr.jpeg',
+      const addr = payments.bep20?.address || 'Contact @Loikye';
+      await sendPayment(bot, chatId, messageId, payments.bep20?.qrFile || 'usdt-bep20-qr.jpeg',
         orderSummary +
         `🪙 *USDT BEP20 Payment*\n\n` +
-        `\`0xf2db22a33bd64e734146229ba3c95813bdf28f7d\`\n\n` +
+        `\`${addr}\`\n\n` +
         `⚠️ *BEP20 network only.* Wrong network = lost funds.`
       );
     }
+    return;
+  }
+
+  // ── Dynamic product page: product_<key> ──────
+  if (data.startsWith('product_')) {
+    const productKey = data.replace('product_', '');
+    const p = getProduct(productKey);
+    if (!p) {
+      await bot.answerCallbackQuery(query.id, { text: 'Product not found.', show_alert: true });
+      return;
+    }
+    if (!p.inStock) {
+      await bot.answerCallbackQuery(query.id, { text: '❌ This product is currently out of stock.', show_alert: true });
+      return;
+    }
+    const isGV = GV_PRODUCTS.includes(productKey);
+    const keyboard = isGV ? buildAreaCodeKeyboard(productKey) : quantityKeyboard(productKey, '0');
+    await edit(buildProductText(productKey, p), keyboard);
     return;
   }
 
@@ -303,43 +393,16 @@ async function handleCallbackQuery(bot, query) {
       try { await bot.deleteMessage(chatId, messageId); } catch (_) {}
       await bot.sendMessage(chatId,
         `❌ *Order Cancelled*\n\nNo problem! Come back anytime.`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: mainMenuKeyboard,
-        }
+        { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard }
       );
       break;
 
     case 'menu_products':
-      await edit(TEXTS.products, productsKeyboard);
-      break;
-
-    // Products → area code selection
-    case 'product_new_gv':
-      await edit(TEXTS.product_new_gv, buildAreaCodeKeyboard('new_gv'));
-      break;
-
-    case 'product_old_gv':
-      await edit(TEXTS.product_old_gv, buildAreaCodeKeyboard('old_gv'));
-      break;
-
-    // Gmail has no area code — go straight to payment
-    case 'product_gmail':
-      await edit(TEXTS.product_gmail, {
-        inline_keyboard: [
-          [{ text: '🏦 UPI', callback_data: 'pay_upi_gmail_0' }],
-          [
-            { text: '🪙 USDT TRC20', callback_data: 'pay_trc20_gmail_0' },
-            { text: '🪙 USDT BEP20', callback_data: 'pay_bep20_gmail_0' },
-          ],
-          [{ text: '⬅ Back to Products', callback_data: 'menu_products' }],
-          [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
-        ],
-      });
+      await edit(TEXTS.products, buildProductsKeyboard());
       break;
 
     case 'menu_pricing':
-      await edit(TEXTS.pricing, {
+      await edit(buildPricingText(), {
         inline_keyboard: [
           [{ text: '🛒 Buy Now', callback_data: 'menu_products' }],
           [{ text: '⬅ Back to Menu', callback_data: 'back_main' }],
@@ -352,11 +415,11 @@ async function handleCallbackQuery(bot, query) {
       break;
 
     case 'menu_payments':
-      await edit(`💳 *Payment Methods*\n\nSelect a product first to pay:`, productsKeyboard);
+      await edit(`💳 *Payment Methods*\n\nSelect a product first to pay:`, buildProductsKeyboard());
       break;
 
     case 'menu_order':
-      await edit(`📦 *Place an Order*\n\nSelect a product to get started:`, productsKeyboard);
+      await edit(`📦 *Place an Order*\n\nSelect a product to get started:`, buildProductsKeyboard());
       break;
 
     case 'menu_faq':
@@ -402,7 +465,7 @@ async function handleCallbackQuery(bot, query) {
     case 'menu_contact':
       await edit(TEXTS.contact, {
         inline_keyboard: [
-          [{ text: '💬 Telegram: @atmoverse', url: 'https://t.me/atmoverse' }],
+          [{ text: '💬 Telegram: @Loikye', url: 'https://t.me/Loikye' }],
           [{ text: '📱 WhatsApp', url: 'https://wa.me/19152481421' }],
           [{ text: '⬅ Back to Menu', callback_data: 'back_main' }],
         ],

@@ -43,7 +43,7 @@ async function askNvidia(history, userMessage) {
 
     if (!reply) {
       logger.warn('NVIDIA NIM returned an empty response');
-      return "I'm sorry, I didn't get a response. Please try again or contact @atmoverse on Telegram.";
+      return "I'm sorry, I didn't get a response. Please try again or contact @Loikye on Telegram.";
     }
 
     return reply.trim();
@@ -54,13 +54,13 @@ async function askNvidia(history, userMessage) {
     logger.error(`NVIDIA NIM error [${status}]:`, detail);
 
     if (status === 401) {
-      return 'AI service authentication error. Please contact support at @atmoverse.';
+      return 'AI service authentication error. Please contact support at @Loikye.';
     }
     if (status === 429) {
-      return "I'm a little busy right now. Please try again in a moment or contact @atmoverse directly.";
+      return "I'm a little busy right now. Please try again in a moment or contact @Loikye directly.";
     }
 
-    return "I'm having trouble connecting to my AI service right now. Please contact us directly:\n\n• Telegram: @atmoverse\n• WhatsApp: https://wa.me/19152481421";
+    return "I'm having trouble connecting to my AI service right now. Please contact us directly:\n\n• Telegram: @Loikye\n• WhatsApp: https://wa.me/19152481421";
   }
 }
 

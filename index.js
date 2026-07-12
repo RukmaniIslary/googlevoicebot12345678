@@ -10,6 +10,7 @@ const TelegramBot = require('node-telegram-bot-api');
 
 const { handleMessage } = require('./handlers/messageHandler');
 const { handleCallbackQuery } = require('./handlers/menuHandler');
+const { handleAdminCommand, handleAdminInput, handleAdminPhoto, handleAdminCallback } = require('./handlers/adminHandler');
 const logger = require('./utils/logger');
 
 // ── Validate required env vars ─────────────────
@@ -40,7 +41,26 @@ logger.info('ATMOVERSE Bot starting up...');
 // Plain text messages
 bot.on('message', async (msg) => {
   try {
-    // Only handle text messages (ignore stickers, photos, etc.)
+    if (!msg.text && !msg.photo) return;
+
+    // Admin photo upload (QR codes)
+    if (msg.photo) {
+      const handled = await handleAdminPhoto(bot, msg);
+      if (handled) return;
+      return;
+    }
+
+    // Admin command
+    if (msg.text === '/admin') {
+      await handleAdminCommand(bot, msg);
+      return;
+    }
+
+    // Admin text input (awaiting responses)
+    const adminHandled = await handleAdminInput(bot, msg);
+    if (adminHandled) return;
+
+    // Regular user messages
     if (msg.text) {
       await handleMessage(bot, msg);
     }
@@ -52,6 +72,10 @@ bot.on('message', async (msg) => {
 // Inline keyboard button presses
 bot.on('callback_query', async (query) => {
   try {
+    // Admin callbacks take priority
+    const adminHandled = await handleAdminCallback(bot, query);
+    if (adminHandled) return;
+
     await handleCallbackQuery(bot, query);
   } catch (err) {
     logger.error('Unhandled error in callback_query handler:', err);

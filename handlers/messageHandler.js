@@ -87,7 +87,7 @@ async function handleMessage(bot, msg) {
 
     await bot.sendMessage(
       chatId,
-      `⚠️ Something went wrong. Please try again or contact us directly:\n\n• Telegram: @atmoverse\n• WhatsApp: https://wa.me/19152481421`,
+      `⚠️ Something went wrong. Please try again or contact us directly:\n\n• Telegram: @Loikye\n• WhatsApp: https://wa.me/19152481421`,
       { reply_markup: mainMenuKeyboard }
     );
   }

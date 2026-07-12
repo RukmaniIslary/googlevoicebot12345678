@@ -118,6 +118,7 @@ function paymentKeyboard(productKey, areaCode, qty) {
         { text: '🪙 USDT TRC20', callback_data: `pay_trc20_${productKey}_${areaCode}_${q}` },
         { text: '🪙 USDT BEP20', callback_data: `pay_bep20_${productKey}_${areaCode}_${q}` },
       ],
+      [{ text: '🟡 Binance Pay', callback_data: `pay_binance_${productKey}_${areaCode}_${q}` }],
       [{ text: '⬅ Back', callback_data: `qty_back_${productKey}_${areaCode}` }],
       [{ text: '🏠 Main Menu', callback_data: 'back_main' }],
     ],
@@ -310,7 +311,7 @@ async function handleCallbackQuery(bot, query) {
   }
 
   // ── Payment: pay_<method>_<product>_<code>_<qty> ──
-  if (data.startsWith('pay_upi_') || data.startsWith('pay_trc20_') || data.startsWith('pay_bep20_')) {
+  if (data.startsWith('pay_upi_') || data.startsWith('pay_trc20_') || data.startsWith('pay_bep20_') || data.startsWith('pay_binance_')) {
     const parts = data.split('_');
     const method = parts[1];
     const qty = parseInt(parts[parts.length - 1], 10) || 1;
@@ -358,6 +359,15 @@ async function handleCallbackQuery(bot, query) {
         `🪙 *USDT BEP20 Payment*\n\n` +
         `\`${addr}\`\n\n` +
         `⚠️ *BEP20 network only.* Wrong network = lost funds.`
+      );
+    } else if (method === 'binance') {
+      const binance = payments.binance || {};
+      const payId = binance.payId || 'Contact @Loikye';
+      await sendPayment(bot, chatId, messageId, binance.qrFile || 'binance-qr.jpeg',
+        orderSummary +
+        `🟡 *Binance Pay*\n\n` +
+        `🆔 *Pay ID:* \`${payId}\`\n\n` +
+        `✅ Open Binance app → Pay → Enter Pay ID or scan QR.`
       );
     }
     return;

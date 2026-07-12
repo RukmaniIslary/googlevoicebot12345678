@@ -35,6 +35,10 @@
     "bep20": {
       "address": "0xf2db22a33bd64e734146229ba3c95813bdf28f7d",
       "qrFile": "usdt-bep20-qr.jpeg"
+    },
+    "binance": {
+      "payId": "977038716",
+      "qrFile": "binance-qr.jpeg"
     }
   }
 }

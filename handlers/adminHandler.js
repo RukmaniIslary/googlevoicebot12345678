@@ -66,9 +66,11 @@ function paymentsMenuKeyboard() {
       [{ text: `🏦 UPI — ${payments.upi?.id || 'not set'}`, callback_data: 'adm_pay_upi' }],
       [{ text: '🪙 USDT TRC20 Address', callback_data: 'adm_pay_trc20' }],
       [{ text: '🪙 USDT BEP20 Address', callback_data: 'adm_pay_bep20' }],
+      [{ text: `🟡 Binance Pay ID — ${payments.binance?.payId || 'not set'}`, callback_data: 'adm_pay_binance' }],
       [{ text: '🖼 Upload UPI QR', callback_data: 'adm_qr_upi' }],
       [{ text: '🖼 Upload TRC20 QR', callback_data: 'adm_qr_trc20' }],
       [{ text: '🖼 Upload BEP20 QR', callback_data: 'adm_qr_bep20' }],
+      [{ text: '🖼 Upload Binance QR', callback_data: 'adm_qr_binance' }],
       [{ text: '⬅ Back', callback_data: 'adm_main' }],
     ],
   };
@@ -225,6 +227,16 @@ async function handleAdminInput(bot, msg) {
     return true;
   }
 
+  // ── Set Binance Pay ID ─────────────────────
+  if (action === 'set_binance') {
+    setPayment('binance', { payId: text });
+    await bot.sendMessage(chatId,
+      `✅ Binance Pay ID updated to: \`${text}\``,
+      { parse_mode: 'Markdown', reply_markup: paymentsMenuKeyboard() }
+    );
+    return true;
+  }
+
   return false;
 }
 
@@ -249,7 +261,7 @@ async function handleAdminPhoto(bot, msg) {
     const axios = require('axios');
     const assetsDir = path.join(__dirname, '../assets');
 
-    const qrFileMap = { upi: 'upi-qr.jpeg', trc20: 'usdt-trc20-qr.jpeg', bep20: 'usdt-bep20-qr.jpeg' };
+    const qrFileMap = { upi: 'upi-qr.jpeg', trc20: 'usdt-trc20-qr.jpeg', bep20: 'usdt-bep20-qr.jpeg', binance: 'binance-qr.jpeg' };
     const qrFile = qrFileMap[method];
     const dest = path.join(assetsDir, qrFile);
 
@@ -395,11 +407,13 @@ async function handleAdminCallback(bot, query) {
     const trc20 = payments.trc20?.address || 'not set';
     const bep20 = payments.bep20?.address || 'not set';
     const upiId = payments.upi?.id || 'not set';
+    const binanceId = payments.binance?.payId || 'not set';
     await edit(
       `💳 *Payment Settings*\n\n` +
       `🏦 *UPI ID:* \`${upiId}\`\n` +
       `🪙 *TRC20:* \`${trc20}\`\n` +
-      `🪙 *BEP20:* \`${bep20}\`\n\n` +
+      `🪙 *BEP20:* \`${bep20}\`\n` +
+      `🟡 *Binance Pay ID:* \`${binanceId}\`\n\n` +
       `Select what to update:`,
       paymentsMenuKeyboard()
     );
@@ -436,6 +450,16 @@ async function handleAdminCallback(bot, query) {
     return true;
   }
 
+  // ── Binance Pay ID update ──────────────────
+  if (data === 'adm_pay_binance') {
+    pendingInput.set(chatId, { action: 'set_binance', data: {} });
+    await edit(
+      `🟡 *Update Binance Pay ID*\n\nSend the new Binance Pay ID:`,
+      { inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'adm_payments' }]] }
+    );
+    return true;
+  }
+
   // ── QR upload prompts ──────────────────────
   if (data === 'adm_qr_upi') {
     pendingInput.set(chatId, { action: 'upload_qr_upi', data: {} });
@@ -459,6 +483,15 @@ async function handleAdminCallback(bot, query) {
     pendingInput.set(chatId, { action: 'upload_qr_bep20', data: {} });
     await edit(
       `🖼 *Upload BEP20 QR Code*\n\nSend the QR image as a *photo*:`,
+      { inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'adm_payments' }]] }
+    );
+    return true;
+  }
+
+  if (data === 'adm_qr_binance') {
+    pendingInput.set(chatId, { action: 'upload_qr_binance', data: {} });
+    await edit(
+      `🖼 *Upload Binance Pay QR Code*\n\nSend the QR image as a *photo*:`,
       { inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'adm_payments' }]] }
     );
     return true;

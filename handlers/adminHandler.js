@@ -2,8 +2,6 @@
 //  ATMOVERSE BOT — Admin Panel Handler
 // ─────────────────────────────────────────────
 
-const path = require('path');
-const fs = require('fs');
 const logger = require('../utils/logger');
 const { getProducts, getProduct, setProduct, deleteProduct, getPayments, setPayment } = require('../utils/store');
 
@@ -248,35 +246,23 @@ async function handleAdminPhoto(bot, msg) {
   const pending = pendingInput.get(chatId);
   if (!pending || !pending.action.startsWith('upload_qr_')) return false;
 
-  const method = pending.action.replace('upload_qr_', ''); // upi / trc20 / bep20
+  const method = pending.action.replace('upload_qr_', ''); // upi / trc20 / bep20 / binance
   pendingInput.delete(chatId);
 
+  // Use Telegram's own file_id — permanent, no download needed, Railway-safe
   const photo = msg.photo[msg.photo.length - 1]; // largest size
   const fileId = photo.file_id;
 
   try {
-    const fileInfo = await bot.getFile(fileId);
-    const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${fileInfo.file_path}`;
-
-    const axios = require('axios');
-    const assetsDir = path.join(__dirname, '../assets');
-
-    const qrFileMap = { upi: 'upi-qr.jpeg', trc20: 'usdt-trc20-qr.jpeg', bep20: 'usdt-bep20-qr.jpeg', binance: 'binance-qr.jpeg' };
-    const qrFile = qrFileMap[method];
-    const dest = path.join(assetsDir, qrFile);
-
-    const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-    fs.writeFileSync(dest, response.data);
-
-    setPayment(method, { qrFile });
+    setPayment(method, { qrFileId: fileId });
 
     await bot.sendMessage(chatId,
-      `✅ *${method.toUpperCase()} QR code updated!*`,
+      `✅ *${method.toUpperCase()} QR code updated!*\n\n_Saved as Telegram file — works across deployments._`,
       { parse_mode: 'Markdown', reply_markup: paymentsMenuKeyboard() }
     );
   } catch (err) {
-    logger.error('QR upload error:', err.message);
-    await bot.sendMessage(chatId, '❌ Failed to save QR image. Try again.');
+    logger.error('QR save error:', err.message);
+    await bot.sendMessage(chatId, '❌ Failed to save QR. Try again.');
   }
   return true;
 }

@@ -134,11 +134,18 @@ const afterPayKeyboard = {
 };
 
 // ── Send QR photo or text fallback ────────────
-async function sendPayment(bot, chatId, messageId, qrFile, text) {
-  const qrPath = path.join(__dirname, '..', 'assets', qrFile);
+async function sendPayment(bot, chatId, messageId, qrFileId, qrFilePath, text) {
   try { await bot.deleteMessage(chatId, messageId); } catch (_) {}
-  if (fs.existsSync(qrPath)) {
-    await bot.sendPhoto(chatId, qrPath, {
+
+  // Prefer Telegram file_id (Railway-safe), fall back to local file, then text-only
+  if (qrFileId) {
+    await bot.sendPhoto(chatId, qrFileId, {
+      caption: text,
+      parse_mode: 'Markdown',
+      reply_markup: afterPayKeyboard,
+    });
+  } else if (qrFilePath && fs.existsSync(qrFilePath)) {
+    await bot.sendPhoto(chatId, qrFilePath, {
       caption: text,
       parse_mode: 'Markdown',
       reply_markup: afterPayKeyboard,
@@ -339,14 +346,16 @@ async function handleCallbackQuery(bot, query) {
       const upiDetails = upi.id
         ? `📱 *UPI ID:* \`${upi.id}\`${upi.name ? `\n👤 *Name:* ${upi.name}` : ''}\n\n✅ Works with Paytm, PhonePe, GPay, BHIM.`
         : `✅ Works with Paytm, PhonePe, GPay, BHIM.\n\n_Contact @Loikye for UPI details._`;
-      await sendPayment(bot, chatId, messageId, upi.qrFile || 'upi-qr.jpeg',
-        orderSummary +
-        `💵 *Amount in INR:* ${inrString} _(live rate)_\n\n` +
-        `🏦 *UPI Payment*\n\n` + upiDetails
+      await sendPayment(bot, chatId, messageId,
+        upi.qrFileId || null,
+        path.join(__dirname, '../assets/upi-qr.jpeg'),
+        orderSummary + `💵 *Amount in INR:* ${inrString} _(live rate)_\n\n` + `🏦 *UPI Payment*\n\n` + upiDetails
       );
     } else if (method === 'trc20') {
       const addr = payments.trc20?.address || 'Contact @Loikye';
-      await sendPayment(bot, chatId, messageId, payments.trc20?.qrFile || 'usdt-trc20-qr.jpeg',
+      await sendPayment(bot, chatId, messageId,
+        payments.trc20?.qrFileId || null,
+        path.join(__dirname, '../assets/usdt-trc20-qr.jpeg'),
         orderSummary +
         `🪙 *USDT TRC20 Payment*\n\n` +
         `\`${addr}\`\n\n` +
@@ -354,7 +363,9 @@ async function handleCallbackQuery(bot, query) {
       );
     } else if (method === 'bep20') {
       const addr = payments.bep20?.address || 'Contact @Loikye';
-      await sendPayment(bot, chatId, messageId, payments.bep20?.qrFile || 'usdt-bep20-qr.jpeg',
+      await sendPayment(bot, chatId, messageId,
+        payments.bep20?.qrFileId || null,
+        path.join(__dirname, '../assets/usdt-bep20-qr.jpeg'),
         orderSummary +
         `🪙 *USDT BEP20 Payment*\n\n` +
         `\`${addr}\`\n\n` +
@@ -363,7 +374,9 @@ async function handleCallbackQuery(bot, query) {
     } else if (method === 'binance') {
       const binance = payments.binance || {};
       const payId = binance.payId || 'Contact @Loikye';
-      await sendPayment(bot, chatId, messageId, binance.qrFile || 'binance-qr.jpeg',
+      await sendPayment(bot, chatId, messageId,
+        binance.qrFileId || null,
+        path.join(__dirname, '../assets/binance-qr.jpeg'),
         orderSummary +
         `🟡 *Binance Pay*\n\n` +
         `🆔 *Pay ID:* \`${payId}\`\n\n` +
